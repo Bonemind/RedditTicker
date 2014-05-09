@@ -1,0 +1,44 @@
+/**
+ * Contains the styling for the reddit news ticker
+ * See the concrete css framework for grid placement
+ */
+/* Document-wide styling and */
+body {
+	background-color: #163f3d;
+	font-size: 20px;
+	color: #777777;
+}
+/* A single newspost div */
+.post {
+	background-color: #236562;
+	padding: 30px;
+	margin-top: 10px;
+	min-height: 80px;
+}
+/* General link styling */
+a {
+	color: #919191;
+	font-weight: bold;
+	text-decoration: none;
+}
+/* Link styling for the main article title */
+a.head {
+	font-size: 30px;
+}
+/* Link styling for the comments link */
+a.comments {
+	font-size: 20px;
+}
+/* Give the user some hover feedback */
+a:hover {
+	text-decoration: underline;
+}
+/* Place the domain text in the correct place */
+.domain {
+	text-align: right;
+}
+/* Footer-specific text size */
+.footer {
+	margin-top:30px;
+	font-size: 15px;
+}

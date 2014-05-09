@@ -1,70 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title></title>
-<script type="text/javascript" src="js/jquery-1.11.1.min.js"></script>
-<script type="text/javascript" src="js/reddit.min.js"></script>
+	<meta charset="UTF-8">
+	<title>RedditTicker</title>
+	<link rel="stylesheet" type="text/css" href="css/concrete.css">
+	<link rel="stylesheet" type="text/css" href="css/custom.css">
+	<script type="text/javascript" src="js/jquery-1.11.1.min.js"></script>
+	<script type="text/javascript" src="js/reddit.min.js"></script>
+	<script type="text/javascript" src="js/moment.min.js"></script>
 </head>
 <body>
-
-<div class="posts" id="posts">
-
+<div class="row">
+	<!-- Div for the actual posts -->
+	<div class="posts" id="posts">
+	</div>
+	<div class="row">
+		<div class="footer">
+			Reddit news ticker, aggregates the news, worldnews, thworldnews, truenews, inthenews, indepthstories, InCaseYouMissedIt and Photoessay subreddits.<br>
+			More info: <a href="http://www.github.com/Bonemind/RedditTicker">http://www.github.com/Bonemind/RedditTicker</a>
+		</div>
+	</div>
 </div>
 
-
 <script type="text/javascript">
-//The interval at which to refresh
-var refreshInterval = 2000;
+//The interval at which to refresh in seconds
+var refreshInterval = 30;
+refreshInterval = refreshInterval * 1000;
 //The subreddits to search
-var subreddits = ["News", "aww", "WorldNews"];
-
-var joined = subreddits.join('+');
+var subreddits = ["News", "worldnews", "InCaseYouMissedIt", "indepthstories", "inthenews", "Photoessay", "theworldnews", "truenews"];
+//The number of posts to keep on screen
+var postNumber = 10;
+//The newest post we recieved, we only need posts newer than this one
 var before = null;
+//The subreddits joined to become one multireddit
+var joined = subreddits.join('+');
 
 //Does the ajax request to fetch the data
 function fetchNews() {
 	//We haven't fetched any news yet
 	if (before == null) {
-		reddit.new(joined).limit(5).fetch(function(res) {
+		reddit.new(joined).limit(postNumber).fetch(function(res) {
 			processData(res);
 		});
 	} else {
-		reddit.new(joined).limit(5).before(before).fetch(function(res) {
+		reddit.new(joined).limit(postNumber).before(before).fetch(function(res) {
 			processData(res);
 		});
 	}
-
 }
-
 
 //Processes the data recieved by reddit
 function processData(res) {
 	if (res === undefined || res.data === undefined) {
 		return;
 	}
-
 	if (res.data.children.length == 0) {
 		return;
 	}
-
 	var posts = res.data.children
-	before = posts[0].data.name;
-	console.log(res);
-	for (var i = 0; i < posts.length; i++) {
-		console.log(posts[i].data);
-		var post = posts[i].data;
-		$("#posts").prepend('<a href="' + post.url + '">' + post.title + "</a>");
+
+	//First run, dump all posts to the screen without waiting
+	if (before == null) {
+		for (var i = 0; i < posts.length; i++) {
+			var post = posts[i].data;
+			$(processPost(post)).appendTo("#posts").fadeIn();
+		}
+
+	//We've already loaded posts, animate new posts
+	//Move in reverse since we get the listing sorted by newest first but we are prepending posts
+	} else {
+		var i = posts.length - 1;
+		(function fadeNext () {
+			 if (i >= 0) {
+				$(processPost(posts[i].data)).prependTo("#posts").fadeIn("slow", fadeNext);
+				i--;
+			}
+		}) ();
 	}
+	before = posts[0].data.name;
+}
+
+//Processes an item
+function processPost(post) {
 	var children = $("#posts").children();
-//	children[children.length - 1].remove();
+	//If there are more than 0 posts, and this is not the initial load
+	//remove the last post
+	if (before != null && children.length > postNumber) {
+		children[children.length - 1].remove();
+	}
+	return generateItem(post);
+}
+
+//Generates the html for a single item
+function generateItem(post) {
+	var postHtml = '<div class="row post" style="display:none">';
+	//Article title
+	postHtml += '<div class="row">';
+	postHtml += '<a target="_blank" class="head" href="' + post.url + '">' + post.title + "</a>";
+	postHtml += '</div>';
+
+	//Comments link
+	postHtml += '<div class="row">';
+	postHtml += '<a target="_blank" class="comments" href="http://reddit.com' + post.permalink + '">Comments</a>';
+	postHtml += '</div>';
+
+	//Extra data
+	postHtml += '<div class="row">';
+
+	//Time since post
+	postHtml += '<div class="two columns">';
+	var m = moment.unix(post.created_utc);
+	postHtml+= m.fromNow();
+	postHtml += '</div>';
+
+	//Domain this article was posted in
+	postHtml += '<div class="six columns offset by-four domain">';
+	postHtml += post.domain;
+	postHtml += '</div>';
+	postHtml += '</div>';
+	return postHtml;
 }
 
 //The function that handles a timer tick
 function update() {
-	$("#posts").empty();
-	fetchNews();
+	try {
+		fetchNews();
+	} catch(err) {
+		console.log("Something went wrong");
+	}
 }
+
+//Fetch initial news, after that, fetch every so much time (refreshinterval)
 fetchNews();
 window.setInterval(update, refreshInterval);
 </script>
