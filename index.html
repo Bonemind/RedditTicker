@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title></title>
+<script type="text/javascript" src="js/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="js/reddit.min.js"></script>
+</head>
+<body>
+
+<div class="posts" id="posts">
+
+</div>
+
+
+<script type="text/javascript">
+//The interval at which to refresh
+var refreshInterval = 2000;
+//The subreddits to search
+var subreddits = ["News", "aww", "WorldNews"];
+
+var joined = subreddits.join('+');
+var before = null;
+
+//Does the ajax request to fetch the data
+function fetchNews() {
+	//We haven't fetched any news yet
+	if (before == null) {
+		reddit.new(joined).limit(5).fetch(function(res) {
+			processData(res);
+		});
+	} else {
+		reddit.new(joined).limit(5).before(before).fetch(function(res) {
+			processData(res);
+		});
+	}
+
+}
+
+
+//Processes the data recieved by reddit
+function processData(res) {
+	if (res === undefined || res.data === undefined) {
+		return;
+	}
+
+	if (res.data.children.length == 0) {
+		return;
+	}
+
+	var posts = res.data.children
+	before = posts[0].data.name;
+	console.log(res);
+	for (var i = 0; i < posts.length; i++) {
+		console.log(posts[i].data);
+		var post = posts[i].data;
+		$("#posts").prepend('<a href="' + post.url + '">' + post.title + "</a>");
+	}
+	var children = $("#posts").children();
+//	children[children.length - 1].remove();
+}
+
+//The function that handles a timer tick
+function update() {
+	$("#posts").empty();
+	fetchNews();
+}
+fetchNews();
+window.setInterval(update, refreshInterval);
+</script>
+</body>
+</html>
