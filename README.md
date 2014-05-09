@@ -3,6 +3,8 @@ RedditTicker
 
 Simple webpage that fetches the newest posts from a few subreddits periodicly and shows the headlines in an always up to date view
 
+[ Demo ] ( http://redditticker.xtyx.nl )
+
 Subreddits:
 -------------
 
