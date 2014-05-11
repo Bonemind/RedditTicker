@@ -23,6 +23,7 @@
 </div>
 
 <script type="text/javascript">
+//Constant variables
 //The interval at which to refresh in seconds
 var refreshInterval = 30;
 refreshInterval = refreshInterval * 1000;
@@ -30,18 +31,29 @@ refreshInterval = refreshInterval * 1000;
 var subreddits = ["News", "worldnews", "InCaseYouMissedIt", "indepthstories", "inthenews", "Photoessay", "theworldnews", "truenews"];
 //The number of posts to keep on screen
 var postNumber = 10;
+//The number of times we should have no new posts before taking action
+var noNewPostsCountThreshold = 25;
+
+//Operational variables
 //The newest post we recieved, we only need posts newer than this one
 var before = null;
+//Counter to keep track of the number of times we had no new posts
+//Used to make sure removed posts don't interfere with our ticker (using before with a removed post appears to always return 0 results)
+var noNewPostsCount = 0;
+//The time of creation of the last post fetched
+var beforeCreatedUtc = null;
 //The subreddits joined to become one multireddit
 var joined = subreddits.join('+');
 
 //Does the ajax request to fetch the data
 function fetchNews() {
-	//We haven't fetched any news yet
-	if (before == null) {
+	//We haven't fetched any news yet, of we have reached our maximum number of no results threshold
+	//blindly fetch the newest posts
+	if (before == null || noNewPostsCount > noNewPostsCountThreshold) {
 		reddit.new(joined).limit(postNumber).fetch(function(res) {
 			processData(res);
 		});
+	//Fetch the posts after the newest post we are displaying
 	} else {
 		reddit.new(joined).limit(postNumber).before(before).fetch(function(res) {
 			processData(res);
@@ -55,7 +67,10 @@ function processData(res) {
 		return;
 	}
 	if (res.data.children.length == 0) {
+		noNewPostsCount++;
 		return;
+	} else {
+		noNewPostsCount = 0;
 	}
 	var posts = res.data.children
 
@@ -72,17 +87,27 @@ function processData(res) {
 		var i = posts.length - 1;
 		(function fadeNext () {
 			 if (i >= 0) {
-				$(processPost(posts[i].data)).prependTo("#posts").fadeIn("slow", fadeNext);
-				i--;
+			 	var postHtml = processPost(posts[i].data);
+				if (postHtml == null) {
+					i--;
+					fadeNext();
+				} else {
+					$(postHtml).prependTo("#posts").fadeIn("slow", fadeNext);
+					i--;
+				}
 			}
 		}) ();
 	}
 	before = posts[0].data.name;
+	beforeCreatedUtc = posts[0].data.created_utc;
 }
 
 //Processes an item
 function processPost(post) {
 	var children = $("#posts").children();
+	if (beforeCreatedUtc != null && post.created_utc < beforeCreatedUtc) {
+		return null;
+	}
 	//If there are more than 0 posts, and this is not the initial load
 	//remove the last post
 	if (before != null && children.length > postNumber) {
@@ -108,13 +133,14 @@ function generateItem(post) {
 	postHtml += '<div class="row">';
 
 	//Time since post
-	postHtml += '<div class="two columns">';
+	postHtml += '<div class="four columns">';
 	var m = moment.unix(post.created_utc);
-	postHtml+= m.fromNow();
+	m.local();
+	postHtml+= m.format('MMMM Do YYYY, h:mm:ss a');
 	postHtml += '</div>';
 
 	//Domain this article was posted in
-	postHtml += '<div class="six columns offset by-four domain">';
+	postHtml += '<div class="six columns offset by-two domain">';
 	postHtml += post.domain;
 	postHtml += '</div>';
 	postHtml += '</div>';
